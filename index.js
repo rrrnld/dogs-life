@@ -36,14 +36,31 @@ app.use(bodyParser.urlencoded({ extended: false }))
 
 app.get('/puppies', (req, res) =>
   Puppy.find()
-    .then(data => res.json(data))
+    .then(puppies => res.json(
+      // expose likes only as a number
+      puppies.map(puppy => {
+        return {
+          _id: puppy._id,
+          name: puppy.name,
+          picture: puppy.picture,
+          likeCount: puppy.likes.length
+        }
+      })
+    ))
     .catch(err => res.status(500).json({ message: err.message }))
 )
 
 app.post('/puppies', (req, res) => {
   const { name, picture } = req.body
   new Puppy({ name, picture }).save()
-    .then(pup => res.status(201).json(pup))
+    .then(pup => {
+      // don't expose likes because there are none yet
+      res.status(201).json({
+        _id: pup._id,
+        name: pup.name,
+        picture: pup.picture
+      })
+    })
     .catch(err => res.status(500).json({ message: err.message }))
 })
 
@@ -51,7 +68,16 @@ app.get('/puppies/:id', (req, res) =>
   Puppy.findById(req.params.id)
     .then(pup => {
       if (pup == null) return res.status(404).json({ message: 'Puppy not found' })
-      res.json(pup)
+      res.json({
+        _id: pup._id,
+        name: pup.name,
+        picture: pup.picture,
+        // expose likes without ip address
+        likeCount: pup.likes.length,
+        comments: pup.likes
+          .filter(like => like.comment != null)
+          .map(({ comment }) => ({ comment }))
+      })
     })
     .catch(err => res.status(500).json({ message: err.message }))
 )
@@ -72,7 +98,7 @@ app.put('/puppies/:id/likes', (req, res) => {
       pup.likes.push(like)
       return pup.save()
     })
-    .then(pup => res.status(201).json(like))
+    .then(pup => res.status(201).json({ comment: like.comment }))
     .catch(err => res.status(500).json({ message: err.message }))
 })
 
