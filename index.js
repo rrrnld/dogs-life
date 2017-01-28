@@ -82,6 +82,25 @@ app.get('/puppies/:id', (req, res) =>
     .catch(err => res.status(500).json({ message: err.message }))
 )
 
+app.put('/puppies/:id', (req, res) => {
+  const { name, picture } = req.body
+  Puppy.findByIdAndUpdate(req.params.id, { name, picture })
+    .then(pup => {
+      res.status(200).json({
+        _id: pup._id,
+        name: pup.name,
+        picture: pup.picture,
+        // expose likes without ip address
+        likeCount: pup.likes.length,
+        comments: pup.likes
+          .filter(like => like.comment != null)
+          .map(({ comment }) => ({ comment }))
+      })
+    })
+    .catch(({ message }) =>
+      res.status(400).json({ message }))
+})
+
 app.put('/puppies/:id/likes', (req, res) => {
   const { comment } = req.body
   const like = { comment }
@@ -99,7 +118,7 @@ app.put('/puppies/:id/likes', (req, res) => {
       return pup.save()
     })
     .then(pup => res.status(201).json({ comment: like.comment }))
-    .catch(err => res.status(500).json({ message: err.message }))
+    .catch(err => res.status(403).json({ message: err.message }))
 })
 
 // Start the server if the app is not `require`d
